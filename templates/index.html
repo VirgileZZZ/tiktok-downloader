@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TikTok Downloader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=Manrope:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #121019; --panel: #1b1826; --panel-2: #24202f; --line: #2e2a3d;
+    --text: #efeaf7; --muted: #918aa8; --cyan: #3cf2e6; --pink: #ff3b6b;
+    --display: "Unbounded", system-ui, sans-serif;
+    --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --r: 18px;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; font-family: var(--body); color: var(--text); background: var(--ink);
+    background-image:
+      radial-gradient(600px 400px at 12% -5%, rgba(60, 242, 230, .10), transparent 70%),
+      radial-gradient(700px 500px at 95% 105%, rgba(255, 59, 107, .10), transparent 70%);
+    background-attachment: fixed;
+    display: flex; flex-direction: column; align-items: center; padding: clamp(40px, 9vh, 96px) 16px 48px;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { width: 100%; max-width: 660px; }
+
+  /* ---- Titre : le décalage RVB façon logo TikTok / effet d'edit ---- */
+  .wordmark {
+    font-family: var(--display); font-weight: 800; font-size: clamp(30px, 7vw, 52px);
+    line-height: 1.02; letter-spacing: -0.03em; margin: 0; text-align: center;
+    text-shadow: -3px 0 rgba(60, 242, 230, .85), 3px 0 rgba(255, 59, 107, .85);
+    animation: split 6s ease-in-out infinite;
+  }
+  @keyframes split {
+    0%, 86%, 100% { text-shadow: -3px 0 rgba(60, 242, 230, .85), 3px 0 rgba(255, 59, 107, .85); }
+    90% { text-shadow: -7px 1px rgba(60, 242, 230, .9), 6px -1px rgba(255, 59, 107, .9); }
+    94% { text-shadow: -1px 0 rgba(60, 242, 230, .8), 1px 0 rgba(255, 59, 107, .8); }
+  }
+  .sub { color: var(--muted); text-align: center; margin: 14px 0 36px; font-size: 16px; }
+
+  /* ---- Champ lien ---- */
+  form {
+    display: flex; gap: 6px; padding: 6px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--r); transition: border-color .2s, box-shadow .2s;
+  }
+  form:focus-within { border-color: #4a4462; box-shadow: 0 0 0 4px rgba(60, 242, 230, .08); }
+  input {
+    flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--text);
+    font: 500 16px var(--body); padding: 14px 14px;
+  }
+  input::placeholder { color: #6d6784; }
+  button { font: 700 15px var(--body); border: 0; cursor: pointer; color: var(--text); }
+  .pill {
+    border-radius: 12px; padding: 0 20px; min-height: 48px; display: inline-flex; align-items: center; gap: 8px;
+    transition: transform .12s ease, background-color .2s, opacity .2s;
+  }
+  .pill:active { transform: scale(.97); }
+  .ghost { background: var(--panel-2); }
+  .ghost:hover { background: #2d2839; }
+  .primary { background: var(--pink); color: #fff; }
+  .primary:hover { background: #ff5580; }
+  .pill:disabled { opacity: .6; cursor: progress; }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  input:focus-visible { outline: none; }
+
+  .hint { color: #6d6784; font-size: 13px; text-align: center; margin-top: 12px; }
+  .msg { display: none; margin-top: 16px; padding: 12px 16px; border-radius: 12px; font-size: 14px;
+         background: rgba(255, 59, 107, .1); border: 1px solid rgba(255, 59, 107, .3); color: #ffb3c4; }
+  .msg.show { display: block; }
+
+  .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
+          animation: rot .7s linear infinite; display: none; }
+  .busy .spin { display: inline-block; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  /* ---- Carte résultat ---- */
+  .card {
+    display: none; margin-top: 20px; padding: 16px; gap: 20px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: calc(var(--r) + 4px);
+  }
+  .card.show { display: flex; animation: rise .35s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+  .thumb { position: relative; width: 168px; flex-shrink: 0; align-self: flex-start; }
+  .thumb img { display: block; width: 100%; aspect-ratio: 9/16; object-fit: cover; border-radius: 14px; background: #000; }
+  .dur {
+    position: absolute; right: 8px; bottom: 8px; font: 500 12px var(--mono); padding: 3px 7px; border-radius: 6px;
+    background: rgba(0, 0, 0, .7); backdrop-filter: blur(6px);
+  }
+
+  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .author { font: 500 15px var(--display); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .caption { color: var(--muted); font-size: 14px; line-height: 1.45; margin-top: 6px;
+             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .caption:empty { display: none; }
+  .specs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 16px; }
+  .specs span { font: 400 12px var(--mono); color: #c9c2dc; background: var(--panel-2); border-radius: 6px; padding: 4px 8px; }
+
+  /* ---- Lignes de téléchargement ---- */
+  .dl { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+  .row {
+    position: relative; overflow: hidden; width: 100%; text-align: left;
+    display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 14px; background: var(--panel-2); border: 1px solid transparent;
+    transition: border-color .2s, background-color .2s, transform .12s;
+  }
+  .row:hover { border-color: #443e59; background: #29243a; }
+  .row:active { transform: scale(.99); }
+  .row.main { background: linear-gradient(var(--panel-2), var(--panel-2)) padding-box,
+                          linear-gradient(90deg, var(--cyan), var(--pink)) border-box; }
+  .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, .06); }
+  .ico svg { width: 18px; height: 18px; }
+  .row b { display: block; font-size: 15px; }
+  .row small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .state { font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; }
+  .row.done .state { color: var(--cyan); }
+  .row.fail .state { color: var(--pink); }
+  .row.working { cursor: progress; }
+
+  /* barre de progression = timeline avec tête de lecture */
+  .track { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; opacity: 0; transition: opacity .2s; }
+  .row.working .track, .row.done .track { opacity: 1; }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--pink)); transition: width .2s linear; }
+  .row.indet .fill { width: 30%; animation: scrub 1.1s ease-in-out infinite alternate; }
+  @keyframes scrub { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+
+  .note { display: none; margin-top: 12px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+  .note.show { display: block; }
+  .note.fixed { color: #a8f7f1; }
+
+  @media (max-width: 560px) {
+    form { flex-wrap: wrap; }
+    input { flex-basis: 100%; }
+    form .pill { flex: 1; justify-content: center; }
+    .card.show { flex-direction: column; }
+    .thumb { width: 150px; align-self: center; }
+    .author { text-align: center; }
+    .caption { text-align: center; }
+    .specs { justify-content: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1 class="wordmark">TikTok Downloader</h1>
+  <p class="sub">Colle un lien, récupère la vidéo en qualité max, sans filigrane.</p>
+
+  <form id="f">
+    <input id="url" placeholder="https://www.tiktok.com/@…/video/…" autocomplete="off" autofocus aria-label="Lien TikTok">
+    <button type="button" class="pill ghost" id="paste">Coller</button>
+    <button type="submit" class="pill primary" id="go"><span class="spin"></span><span id="go-label">Analyser</span></button>
+  </form>
+  <p class="hint" id="hint">Marche avec les liens tiktok.com et vm.tiktok.com</p>
+  <div class="msg" id="msg" role="alert"></div>
+
+  <section class="card" id="res" aria-live="polite">
+    <div class="thumb">
+      <img id="thumb" alt="">
+      <span class="dur" id="dur"></span>
+    </div>
+    <div class="meta">
+      <div class="author" id="author"></div>
+      <div class="caption" id="caption"></div>
+      <div class="specs" id="specs"></div>
+
+      <div class="dl">
+        <button class="row main" data-type="hd">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4-2.5z" fill="currentColor"/></svg></span>
+          <span><b>Vidéo HD</b><small id="hd-sub">Meilleure qualité</small></span>
+          <span class="state"></span><span class="track"><span class="fill"></span></span>
+        </button>
+        <button class="row" data-type="h264" id="row-h264">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+          <span><b>Vidéo compatible</b><small id="h264-sub">H.264, lisible sur tous les PC et logiciels de montage</small></span>
+          <span class="state"></span><span class="track"><span class="fill"></span></span>
+        </button>
+        <button class="row" data-type="mp3">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>
+          <span><b>Audio MP3</b><small>320 kbps, le son de la vidéo</small></span>
+          <span class="state"></span><span class="track"><span class="fill"></span></span>
+        </button>
+      </div>
+      <p class="note" id="note"></p>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let current = "";
+
+function showError(t) { $("msg").textContent = t; $("msg").classList.toggle("show", !!t); }
+function fmtTime(s) { s = Math.round(s || 0); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+function note(text, fixed) { const n = $("note"); n.textContent = text || ""; n.className = "note" + (text ? " show" : "") + (fixed ? " fixed" : ""); }
+
+$("paste").onclick = async () => {
+  try { $("url").value = (await navigator.clipboard.readText()).trim(); $("f").requestSubmit(); }
+  catch { showError("Le navigateur bloque le presse-papiers : colle avec Ctrl+V."); }
+};
+
+$("f").onsubmit = async e => {
+  e.preventDefault();
+  const url = $("url").value.trim();
+  if (!url) return showError("Colle un lien TikTok pour commencer.");
+  showError(""); $("res").classList.remove("show");
+  $("go").disabled = true; $("go").classList.add("busy"); $("go-label").textContent = "Analyse…";
+  try {
+    const r = await fetch("/api/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Analyse impossible.");
+    current = url;
+    $("thumb").src = d.thumbnail || "";
+    $("dur").textContent = d.duration ? fmtTime(d.duration) : "";
+    $("author").textContent = d.author ? "@" + d.author : "";
+    $("caption").textContent = d.title || "";
+    const specs = [d.hd_label, d.fps ? `${Math.round(d.fps)} fps` : null, d.hd_codec].filter(Boolean);
+    $("specs").innerHTML = specs.map(s => `<span>${s}</span>`).join("");
+    $("hd-sub").textContent = `${d.hd_label} · ${d.hd_codec}` + (d.hd_codec === "H.265" ? " · meilleure qualité" : " · lisible partout");
+    $("row-h264").style.display = d.hd_codec === "H.265" ? "" : "none";
+    if (d.h264_label) $("h264-sub").textContent = `${d.h264_label} · H.264 · lisible sur tous les PC et en montage`;
+    document.querySelectorAll(".row").forEach(reset);
+    note(d.hd_codec === "H.265" ? "Si la vidéo HD ne se lit pas sur ton PC (codec H.265), prends la version compatible." : "");
+    $("res").classList.add("show");
+    $("hint").style.display = "none";
+  } catch (err) { showError(err.message); }
+  finally { $("go").disabled = false; $("go").classList.remove("busy"); $("go-label").textContent = "Analyser"; }
+};
+
+function reset(row) { row.className = row.className.replace(/\b(working|indet|done|fail)\b/g, "").trim(); row.querySelector(".state").textContent = ""; row.querySelector(".fill").style.width = ""; }
+function setState(row, cls, text, pct) {
+  reset(row); if (cls) row.classList.add(...cls.split(" "));
+  row.querySelector(".state").textContent = text;
+  if (pct != null) row.querySelector(".fill").style.width = pct + "%";
+}
+
+document.querySelectorAll(".row").forEach(row => row.addEventListener("click", async () => {
+  if (row.classList.contains("working") || !current) return;
+  const type = row.dataset.type;
+  setState(row, "working indet", "Préparation…");
+  try {
+    const r = await fetch(`/api/download?type=${type}&url=${encodeURIComponent(current)}`);
+    if (!r.ok) throw new Error((await r.text()) || "Téléchargement impossible.");
+    const total = +r.headers.get("Content-Length") || 0;
+    const reader = r.body.getReader(); const chunks = []; let got = 0;
+    setState(row, total ? "working" : "working indet", "Réception…", 0);
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); got += value.length;
+      if (total) setState(row, "working", `${Math.round(got / total * 100)} %`, got / total * 100);
+    }
+    const name = decodeURIComponent(r.headers.get("X-Filename") || `tiktok.${type === "mp3" ? "mp3" : "mp4"}`);
+    const blob = new Blob(chunks, { type: r.headers.get("Content-Type") || "application/octet-stream" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    setState(row, "done", `✓ ${(got / 1048576).toFixed(1)} Mo`, 100);
+    const fixed = decodeURIComponent(r.headers.get("X-Repaired") || "");
+    if (fixed) note(`Vidéo réparée (${fixed}) : réencodée en H.264 propre pour qu'elle se lise partout.`, true);
+  } catch (err) {
+    setState(row, "fail", "Échec");
+    showError(String(err.message).slice(0, 300));
+  }
+}));
+</script>
+</body>
+</html>
